@@ -1,39 +1,69 @@
-# LOCI: Spatial Linear Memory for Streaming World Models
+<div align="center">
 
-**Ji Xia · Tingting Liao · Xuezhi Liang · Hao Li · Guangyi Liu**
+# LOCI
 
-Institute of Foundation Models, Mohamed bin Zayed University of Artificial Intelligence · Mohamed bin Zayed University of Artificial Intelligence · Pinscreen
+### Spatial Linear Memory for Streaming World Models
 
-[Project page](https://xiaji2021.github.io/LOCI/) · [Paper PDF](https://xiaji2021.github.io/LOCI/assets/paper.pdf) · [Dataset (Hugging Face)](https://huggingface.co/datasets/sum0214/LOCI-revisit-data) · Checkpoints: coming soon
+**Ji Xia**<sup>1</sup> · **Tingting Liao**<sup>1</sup> · **Xuezhi Liang**<sup>1</sup> · **Hao Li**<sup>2,3</sup> · **Guangyi Liu**<sup>1,†</sup>
 
-Inference-only release of **LOCI**, a long-horizon, camera-controlled video world model built on
-[Wan2.2-TI2V-5B](https://github.com/Wan-Video/Wan2.2). Given a first frame (or a clean video prefix),
-a text prompt and a camera trajectory, LOCI generates the video chunk by chunk (5 latent frames =
-20 video frames per chunk) while remembering what it has already seen.
+<sup>1</sup>Institute of Foundation Models, MBZUAI &nbsp;&nbsp; <sup>2</sup>MBZUAI &nbsp;&nbsp; <sup>3</sup>Pinscreen &nbsp;&nbsp; <sup>†</sup>Corresponding author
 
-Model summary (30 Wan2.2-5B blocks):
+<a href="https://xiaji2021.github.io/LOCI/"><img src="https://img.shields.io/badge/Project-Page-f2b35b?style=for-the-badge" alt="Project page"></a>
+<a href="https://arxiv.org/abs/2609.40222"><img src="https://img.shields.io/badge/arXiv-2609.40222-b31b1b?style=for-the-badge" alt="arXiv"></a>
+<a href="https://huggingface.co/papers/2609.40222"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Paper-Daily%20Papers-ffd21e?style=for-the-badge" alt="HF paper"></a>
+<a href="https://huggingface.co/datasets/sum0214/LOCI-revisit-data"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-LOCI--revisit--data-ffd21e?style=for-the-badge" alt="Dataset"></a>
+<img src="https://img.shields.io/badge/Checkpoints-coming%20soon-lightgrey?style=for-the-badge" alt="Checkpoints coming soon">
 
-* **Hybrid memory blocks** (15 blocks, `hybrid_layers`): intra-chunk softmax attention plus a
-  Kimi-Delta-Attention (KDA) recurrent state that summarises *all* committed history with
-  chunk-level retention. Recurrent addresses carry per-ray PRoPE camera geometry and no time
-  encoding (`loci/kda.py`).
-* **History softmax blocks** (the other 15): attend to a history K/V cache — either the full
-  history (`dense`) or a bounded set (`sparse`: first frame + a field-of-view view bank + the most
-  recent frames) with constant memory (`loci/memory.py`).
-* **Camera branch** in all 30 blocks: UCPE-style relative-ray PRoPE attention with an absolute
-  up/latitude map (`loci/ucpe.py`, `loci/camera.py`).
-* **Read-then-commit** generation: a chunk is denoised while reading the committed history, then a
-  separate commit forward writes it into the caches / recurrent state (`loci/pipeline.py`).
+<img src="assets/teaser.jpg" width="92%" alt="Returning to a previously seen place: LOCI restores what was there, a same-recipe full-softmax model does not.">
 
-Training code is not part of this release.
+<sub><i>Look away. Come back. It's still there.</i> — the camera returns to a place it saw earlier; LOCI restores it, a full-softmax model trained with the same recipe does not.</sub>
 
-## Dataset
+</div>
 
-[**LOCI-revisit-data**](https://huggingface.co/datasets/sum0214/LOCI-revisit-data): game-engine video with exact camera
-poses, depth and revisit pairs (199 sequences, 70 maps, ~24 h), released per subset under the licenses of the source
-scenes (see the dataset card).
+---
 
-## Requirements
+**LOCI** is a long-horizon, camera-controlled video world model built on
+[Wan2.2-TI2V-5B](https://github.com/Wan-Video/Wan2.2). Given a first frame (or a clean video prefix), a text prompt
+and a camera trajectory, it generates the video chunk by chunk while remembering what it has already seen, so a
+revisit shows the same world.
+
+This repository contains the **inference code**. Model weights are coming soon; training code is not part of this release.
+
+## ✨ How it works
+
+<table>
+<tr><td width="34%"><b>Hybrid memory blocks</b><br><sub>15 of 30 blocks</sub></td><td>Intra-chunk softmax attention plus a Kimi-Delta-Attention (KDA) recurrent state that summarises <i>all</i> committed history with chunk-level retention. Reads and writes carry per-ray PRoPE camera geometry. <code>loci/kda.py</code></td></tr>
+<tr><td><b>History softmax blocks</b><br><sub>the other 15</sub></td><td>Attend to a history K/V cache: the full history (<code>dense</code>), or a bounded set (<code>sparse</code>: first frame + a view bank + the most recent frames) at constant memory. <code>loci/memory.py</code></td></tr>
+<tr><td><b>Camera branch</b><br><sub>all 30 blocks</sub></td><td>UCPE-style relative-ray PRoPE attention with an absolute up/latitude map. <code>loci/ucpe.py</code>, <code>loci/camera.py</code></td></tr>
+<tr><td><b>Read-then-commit</b></td><td>Each chunk is denoised while reading the committed history; a separate commit forward then writes it into the caches and the recurrent state. <code>loci/pipeline.py</code></td></tr>
+</table>
+
+## 📦 Dataset
+
+[**LOCI-revisit-data**](https://huggingface.co/datasets/sum0214/LOCI-revisit-data) — game-engine video with exact
+camera poses, depth and revisit pairs: 199 sequences, 70 maps, ~24 h. Each subset is released under the license of
+its source scenes (see the dataset card).
+
+## 🚀 Quick start
+
+```bash
+# install
+conda create -n loci python=3.10 -y && conda activate loci
+pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cu128
+pip install -r requirements.txt
+
+# a camera trajectory: look around, 16 chunks = 20 s
+python examples/make_trajectory.py --preset look_around --chunks 16 --output traj.json
+
+# generate from one image + a prompt
+python scripts/generate.py --weights /path/to/loci-weights --wan Wan-AI/Wan2.2-TI2V-5B-Diffusers \
+    --image first_frame.png --prompt "A sunlit stone temple courtyard with red lanterns." \
+    --trajectory traj.json --history sparse --height 512 --width 768 --output out.mp4
+```
+
+Details on requirements, FlashAttention-3, weights and all options follow below.
+
+## 🖥️ Requirements
 
 * Linux, one NVIDIA GPU with >= 24 GB memory for 512x768 / 480x864 (bf16). Measured on one H200
   (40 s of video = 32 chunks at 480x864, 50 steps): `sparse` ~330 s and 17 GiB peak (constant in
@@ -43,7 +73,7 @@ scenes (see the dataset card).
 * For FlashAttention-3 (optional, Hopper only): CUDA toolkit >= 12.3 with `nvcc`, a C++17 host compiler
   (g++ >= 9), `git` and network access to GitHub while building.
 
-## Install
+## 🔧 Install
 
 ```bash
 conda create -n loci python=3.10 -y && conda activate loci
@@ -54,7 +84,10 @@ pip install -r requirements.txt
 `flash-linear-attention==0.5.2` provides the KDA kernels (Triton; any recent NVIDIA GPU). No system
 `ffmpeg` is needed (the binary shipped with `imageio-ffmpeg` is used when none is on `PATH`).
 
-**FlashAttention-3 (recommended on H100/H200).** It is used for the intra-chunk attention and is
+<details>
+<summary><b>FlashAttention-3</b> (recommended on H100/H200)</summary>
+
+It is used for the intra-chunk attention and is
 needed to reproduce the reference outputs bit-for-bit. Build it from source (about 30 min with 48 cores;
 the build fetches the CUTLASS submodule itself):
 
@@ -67,6 +100,8 @@ MAX_JOBS=16 python setup.py install         # each compile job needs a few GB of
 python -c "import flash_attn_interface"     # check (run outside the hopper/ directory)
 ```
 
+</details>
+
 Without FlashAttention-3 the intra-chunk attention falls back to PyTorch SDPA (a warning is printed;
 `LOCI_LOCAL_ATTN=sdpa` forces it). Speed and memory are about the same and the outputs are equally
 valid samples, but because generation is autoregressive they drift away from the reference samples
@@ -75,7 +110,7 @@ over long rollouts (different details, same scene).
 The patch embedding is compiled with `torch.compile` (needed for bit-identical outputs). If
 compilation fails on your system (e.g. no C compiler), set `LOCI_COMPILE_PATCH_EMBED=0`.
 
-## Weights
+## ⚖️ Weights
 
 * Base assets from `Wan-AI/Wan2.2-TI2V-5B-Diffusers` (Hugging Face): only the VAE, the UMT5 text
   encoder and the tokenizer are used (~14 GB; the Wan transformer is not needed). `--wan` takes the
@@ -104,7 +139,7 @@ loci-weights/
 python scripts/convert_checkpoint.py --src /path/to/training/checkpoint --dst /path/to/loci-weights --dtype bf16
 ```
 
-## Usage
+## 🎬 Usage
 
 ```bash
 # 1) a camera trajectory (one pose per latent frame; see "Trajectory format")
@@ -170,24 +205,29 @@ Guidance: the model is run without classifier-free guidance (guidance scale 1), 
 * `intrinsics_norm` (optional): `[fx/W, fy/H, cx/W, cy/H]`, only used to pick history views in
   `sparse` mode (defaults to the FOV-derived pinhole).
 
-## Reproducibility
+## 🔁 Reproducibility
 
 Inference runs in bfloat16. With FlashAttention-3 and the pinned versions on an H200 the release
 reproduces the research implementation used for the paper bit-for-bit (identical latents), in both
 history presets (for `sparse` with `--pin-anchors 0`, the paper setting; with the default pinning it
 matches the research implementation run with the same pinning). Timing and memory: see "Requirements".
 
-## License
+## 📄 License
 
 Code: Apache-2.0 (see `LICENSE`). Third-party components and their licenses are listed in
 `THIRD_PARTY_LICENSES.md`. The Wan2.2 base weights are subject to their own license.
 
-## Citation
+## 📚 Citation
 
 ```bibtex
 @article{xia2026loci,
   title={LOCI: Spatial Linear Memory for Streaming World Models},
   author={Xia, Ji and Liao, Tingting and Liang, Xuezhi and Li, Hao and Liu, Guangyi},
+  journal={arXiv preprint arXiv:2609.40222},
   year={2026}
 }
 ```
+
+## 🙏 Acknowledgements
+
+LOCI builds on [Wan2.2](https://github.com/Wan-Video/Wan2.2), [flash-linear-attention](https://github.com/fla-org/flash-linear-attention) (KDA kernels), [PRoPE](https://arxiv.org/abs/2507.10496), [UCPE](https://github.com/chengzhag/UCPE) and [FlashAttention](https://github.com/Dao-AILab/flash-attention). See `THIRD_PARTY_LICENSES.md`.
