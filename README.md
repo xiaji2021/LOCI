@@ -14,7 +14,7 @@
 <a href="https://huggingface.co/datasets/sum0214/LOCI-revisit-data"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-LOCI--revisit--data-ffd21e?style=for-the-badge" alt="Dataset"></a>
 <img src="https://img.shields.io/badge/Checkpoints-coming%20soon-lightgrey?style=for-the-badge" alt="Checkpoints coming soon">
 
-<img src="assets/teaser.jpg" width="92%" alt="Returning to a previously seen place: LOCI restores what was there, a same-recipe full-softmax model does not.">
+<img src="assets/teaser.png" width="100%" alt="Returning to a previously seen place: LOCI restores what was there, a same-recipe full-softmax model does not.">
 
 <sub><i>Look away. Come back. It's still there.</i> — the camera returns to a place it saw earlier; LOCI restores it, a full-softmax model trained with the same recipe does not.</sub>
 
