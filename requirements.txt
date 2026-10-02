@@ -1,0 +1,17 @@
+# Tested versions (CUDA 12.8, NVIDIA H200).
+torch==2.9.0
+diffusers==0.36.0
+accelerate==1.12.0            # low-memory model loading
+transformers==4.57.1
+flash-linear-attention==0.5.2   # KDA kernels (fla); pulls fla-core==0.5.2
+triton==3.5.0
+einops==0.8.2
+safetensors==0.7.0
+numpy==2.2.6
+pillow==11.3.0
+mediapy==1.2.5
+imageio-ffmpeg==0.6.0
+huggingface_hub>=0.34         # `hf download` for the base assets
+# Optional, Hopper GPUs, required for bit-identical reference outputs:
+#   FlashAttention-3 (flash_attn_interface), built from https://github.com/Dao-AILab/flash-attention (hopper/),
+#   see README "Install" (needs nvcc >= 12.3, g++, ninja).
